@@ -1365,6 +1365,1508 @@
             showToast(`Conversa iniciada com ${corrida.motorista.nome}!`);
         }
 
+        
+        // Funções do Chat
+        function carregarConversas() {
+            const container = document.getElementById('listaConversas');
+            
+            if (conversas.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state" style="text-align: center; padding: 40px;">
+                        <div style="font-size: 4rem; margin-bottom: 16px; opacity: 0.5;">💬</div>
+                        <div style="font-size: 1.2rem; font-weight: 600; margin-bottom: 8px;">Nenhuma conversa</div>
+                        <div style="color: #64748b;">
+                            Reserve uma carona para começar a conversar com o motorista
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            conversas.forEach(conv => {
+                html += `
+                    <div class="conversa-item ${conv.naoLidas > 0 ? 'unread' : ''}" onclick="abrirConversa('${conv.id}')">
+                        <div class="conversa-avatar ${conv.motorista.tipo === 'female' ? 'female' : ''}">
+                            ${conv.motorista.foto}
+                        </div>
+                        <div class="conversa-info">
+                            <div class="conversa-nome">
+                                ${conv.motorista.nome}
+                                ${conv.motorista.tipo === 'female' ? '<span style="background: #fce7f3; color: #ec4899; padding: 2px 8px; border-radius: 20px; font-size: 0.7rem;">👩</span>' : ''}
+                            </div>
+                            <div class="conversa-ultima-msg">
+                                ${conv.ultimaMensagem || 'Clique para ver a conversa'}
+                            </div>
+                            <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 2px;">
+                                ${locations[conv.corrida.partida]} → ${locations[conv.corrida.destino]} • ${conv.corrida.horario}
+                            </div>
+                        </div>
+                        <div class="conversa-tempo">
+                            ${conv.timestamp}
+                            ${conv.naoLidas > 0 ? `<span class="unread-badge">${conv.naoLidas}</span>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function abrirConversa(conversaId) {
+            conversaAtual = conversas.find(c => c.id === conversaId);
+            if (!conversaAtual) return;
+
+            document.getElementById('conversasList').style.display = 'none';
+            document.getElementById('chatAtivo').style.display = 'block';
+
+            document.getElementById('chatAvatar').textContent = conversaAtual.motorista.foto;
+            document.getElementById('chatNome').textContent = conversaAtual.motorista.nome;
+            document.getElementById('chatStatus').innerHTML = `
+                ${conversaAtual.motorista.online ? '🟢 Online' : '⚪ Offline'} • 
+                ${conversaAtual.motorista.carro} • 
+                ⭐ ${conversaAtual.motorista.avaliacao}
+            `;
+
+            carregarMensagens(conversaId);
+        }
+
+        function carregarMensagens(conversaId) {
+            const container = document.getElementById('chatMessages');
+            const msgs = mensagens[conversaId] || [];
+            
+            let html = '';
+            msgs.forEach(msg => {
+                html += `
+                    <div class="chat-message ${msg.sender === 'usuario' ? 'sent' : ''}">
+                        <div class="message-bubble">
+                            ${msg.sender !== 'usuario' && msg.sender !== 'sistema' ? `<div class="message-sender">${msg.sender === 'motorista' ? conversaAtual.motorista.nome : ''}</div>` : ''}
+                            ${msg.text}
+                            <span class="message-time">${msg.time}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function enviarMensagem() {
+            const input = document.getElementById('chatInput');
+            const texto = input.value.trim();
+            
+            if (!texto || !conversaAtual) return;
+
+            const novaMsg = {
+                id: Date.now(),
+                sender: "usuario",
+                text: texto,
+                time: new Date().toLocaleTimeString()
+            };
+
+            mensagens[conversaAtual.id].push(novaMsg);
+            conversaAtual.ultimaMensagem = texto;
+            conversaAtual.timestamp = new Date().toLocaleTimeString();
+
+            carregarMensagens(conversaAtual.id);
+            input.value = '';
+
+            // Simular resposta do motorista
+            setTimeout(() => {
+                const respostas = [
+                    "Ok, combinado!",
+                    "Pode deixar, estou chegando.",
+                    "Certo, te espero no ponto.",
+                    "Qual o ponto exato?",
+                    "Tudo bem, confirmado!"
+                ];
+                const respostaAleatoria = respostas[Math.floor(Math.random() * respostas.length)];
+                
+                const respostaMsg = {
+                    id: Date.now(),
+                    sender: "motorista",
+                    text: respostaAleatoria,
+                    time: new Date().toLocaleTimeString()
+                };
+                
+                mensagens[conversaAtual.id].push(respostaMsg);
+                conversaAtual.ultimaMensagem = respostaAleatoria;
+                conversaAtual.timestamp = new Date().toLocaleTimeString();
+                carregarMensagens(conversaAtual.id);
+            }, 1500);
+        }
+
+        function voltarConversas() {
+            document.getElementById('conversasList').style.display = 'block';
+            document.getElementById('chatAtivo').style.display = 'none';
+            carregarConversas();
+        }
+        <!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Busitrip - Londrina</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fa;
+            color: #1e293b;
+            overflow-x: hidden;
+        }
+
+        .app-container {
+            max-width: 100%;
+            width: 100%;
+            min-height: 100vh;
+            background: white;
+            position: relative;
+            box-shadow: none;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .app-header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 20px 16px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            width: 100%;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .app-header h1 {
+            font-size: 1.6rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+        }
+
+        .app-header h1 span {
+            background: rgba(255,255,255,0.2);
+            padding: 4px 10px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .location-badge {
+            background: rgba(255,255,255,0.15);
+            padding: 6px 14px;
+            border-radius: 30px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.9rem;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0 20px;
+            border-top: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+            z-index: 100;
+        }
+
+        .nav-item {
+            text-align: center;
+            color: #94a3b8;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+            cursor: pointer;
+            padding: 4px 12px;
+            border-radius: 30px;
+        }
+
+        .nav-item.active {
+            color: #2a5298;
+            background: rgba(42,82,152,0.1);
+        }
+
+        .nav-item i {
+            font-size: 1.6rem;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 16px;
+            padding-bottom: 90px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .card {
+            background: white;
+            border-radius: 24px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+            border: 1px solid #f0f2f5;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            margin-bottom: 16px;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+        }
+
+        .btn {
+            padding: 16px 20px;
+            border-radius: 30px;
+            border: none;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.2s;
+            -webkit-touch-callout: none;
+            touch-action: manipulation;
+            margin-bottom: 8px;
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            box-shadow: 0 8px 20px rgba(42,82,152,0.3);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid #2a5298;
+            color: #2a5298;
+        }
+
+        .btn-outline:active {
+            background: #2a5298;
+            color: white;
+        }
+
+        .btn-pink {
+            background: #f472b6;
+            color: white;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #1e293b;
+            font-size: 0.95rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 16px;
+            border-radius: 16px;
+            border: 2px solid #eef2f6;
+            font-size: 1rem;
+            background: white;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #2a5298;
+        }
+
+        select.form-control {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%232a5298' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
+            padding-right: 48px;
+        }
+
+        /* Trip Item */
+        .trip-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            border-radius: 20px;
+            transition: all 0.2s;
+            cursor: pointer;
+            background: white;
+            margin-bottom: 8px;
+            border: 1px solid #f0f2f5;
+        }
+
+        .trip-item:active {
+            background: #f8fafc;
+            transform: translateX(4px);
+        }
+
+        .trip-avatar {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.4rem;
+            flex-shrink: 0;
+        }
+
+        .trip-avatar.female {
+            background: linear-gradient(135deg, #f472b6 0%, #ec4899 100%);
+        }
+
+        .trip-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .trip-info h3 {
+            font-size: 1.1rem;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .trip-details {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .trip-route {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #64748b;
+            font-size: 0.9rem;
+            flex-wrap: wrap;
+        }
+
+        .trip-time {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        .trip-price {
+            font-weight: bold;
+            color: #2a5298;
+            font-size: 1.3rem;
+            flex-shrink: 0;
+        }
+
+        .badge {
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .badge-green {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .badge-blue {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-pink {
+            background: #fce7f3;
+            color: #ec4899;
+        }
+
+        .badge-yellow {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        /* Chat */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 250px);
+            background: #f8fafc;
+            border-radius: 24px;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            background: white;
+            border-bottom: 1px solid #eef2f6;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .chat-message {
+            display: flex;
+            margin-bottom: 16px;
+            animation: fadeIn 0.3s;
+        }
+
+        .chat-message.sent {
+            justify-content: flex-end;
+        }
+
+        .message-bubble {
+            max-width: 80%;
+            padding: 14px 18px;
+            border-radius: 24px;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+        }
+
+        .chat-message.sent .message-bubble {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+        }
+
+        .message-sender {
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #2a5298;
+        }
+
+        .message-time {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            margin-top: 4px;
+            display: block;
+            text-align: right;
+        }
+
+        .chat-input-container {
+            display: flex;
+            gap: 8px;
+            padding: 16px;
+            background: white;
+            border-top: 1px solid #eef2f6;
+        }
+
+        .chat-input {
+            flex: 1;
+            border: 2px solid #eef2f6;
+            border-radius: 30px;
+            padding: 14px 18px;
+            font-size: 1rem;
+            background: #f8fafc;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: #2a5298;
+        }
+
+        .chat-send-btn {
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            flex-shrink: 0;
+        }
+
+        .chat-send-btn:active {
+            transform: scale(0.95);
+        }
+
+        .conversa-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            border-radius: 20px;
+            background: white;
+            margin-bottom: 8px;
+            border: 1px solid #f0f2f5;
+            cursor: pointer;
+        }
+
+        .conversa-item:active {
+            background: #f8fafc;
+        }
+
+        .conversa-avatar {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.4rem;
+            flex-shrink: 0;
+        }
+
+        .conversa-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .conversa-nome {
+            font-weight: 600;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .conversa-ultima-msg {
+            color: #64748b;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .conversa-tempo {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            flex-shrink: 0;
+        }
+
+        .unread-badge {
+            background: #2a5298;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 24px;
+            border-radius: 30px;
+            width: 90%;
+            max-width: 400px;
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: fadeIn 0.3s;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-close {
+            font-size: 1.8rem;
+            cursor: pointer;
+            color: #94a3b8;
+            padding: 8px;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 16px;
+            right: 16px;
+            background: #1e293b;
+            color: white;
+            padding: 16px;
+            border-radius: 30px;
+            text-align: center;
+            font-weight: 600;
+            animation: slideUp 0.3s;
+            z-index: 1000;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        @supports (padding: max(0px)) {
+            .app-header {
+                padding-top: max(20px, env(safe-area-inset-top));
+                padding-left: max(16px, env(safe-area-inset-left));
+                padding-right: max(16px, env(safe-area-inset-right));
+            }
+            
+            .bottom-nav {
+                padding-bottom: max(10px, env(safe-area-inset-bottom));
+            }
+            
+            .main-content {
+                padding-bottom: max(90px, calc(90px + env(safe-area-inset-bottom)));
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 0;
+            background: transparent;
+        }
+    </style>
+</head>
+<body>
+    <!-- Tela de Login -->
+    <div id="loginScreen" style="display: block;">
+        <div style="padding: 20px; min-height: 100vh; display: flex; align-items: center; justify-content: center;">
+            <div style="width: 100%; max-width: 400px;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <div style="font-size: 4rem; margin-bottom: 10px;">🚗</div>
+                    <h2 style="font-size: 2rem; color: #1e293b;">Busitrip</h2>
+                    <p style="color: #64748b;">Londrina - PR</p>
+                </div>
+                
+                <div style="display: flex; gap: 8px; margin-bottom: 20px;">
+                    <div class="login-tab" style="flex: 1; padding: 12px; text-align: center; border-radius: 30px; background: #2a5298; color: white; font-weight: 600; cursor: pointer;" onclick="showLoginTab('usuario')">Usuário</div>
+                    <div class="login-tab" style="flex: 1; padding: 12px; text-align: center; border-radius: 30px; background: #e2e8f0; color: #1e293b; font-weight: 600; cursor: pointer;" onclick="showLoginTab('motorista')">Motorista</div>
+                    <div class="login-tab" style="flex: 1; padding: 12px; text-align: center; border-radius: 30px; background: #e2e8f0; color: #1e293b; font-weight: 600; cursor: pointer;" onclick="showLoginTab('admin')">Admin</div>
+                </div>
+
+                <!-- Login Usuário -->
+                <div id="loginUsuario" style="display: block;">
+                    <div class="form-group">
+                        <label>E-mail</label>
+                        <input type="email" class="form-control" id="userEmail" value="usuario@teste.com" placeholder="Seu e-mail">
+                    </div>
+                    <div class="form-group">
+                        <label>Senha</label>
+                        <input type="password" class="form-control" id="userPassword" value="123456" placeholder="Sua senha">
+                    </div>
+                    <button class="btn btn-primary" onclick="loginUsuario()">Entrar como Usuário</button>
+                </div>
+
+                <!-- Login Motorista -->
+                <div id="loginMotorista" style="display: none;">
+                    <div class="form-group">
+                        <label>Login do Motorista</label>
+                        <input type="text" class="form-control" id="motoristaLogin" placeholder="Digite seu login" value="motorista1">
+                    </div>
+                    <div class="form-group">
+                        <label>Senha</label>
+                        <input type="password" class="form-control" id="motoristaSenha" placeholder="Digite sua senha" value="motorista1">
+                    </div>
+                    <button class="btn btn-pink" onclick="loginMotorista()">Entrar como Motorista</button>
+                </div>
+
+                <!-- Login Admin -->
+                <div id="loginAdmin" style="display: none;">
+                    <div class="form-group">
+                        <label>Login do Administrador</label>
+                        <input type="text" class="form-control" id="adminLogin" placeholder="Digite seu login" value="busitripadmin">
+                    </div>
+                    <div class="form-group">
+                        <label>Senha</label>
+                        <input type="password" class="form-control" id="adminSenha" placeholder="Digite sua senha" value="admbus">
+                    </div>
+                    <button class="btn" style="background: #1e293b; color: white;" onclick="loginAdmin()">Entrar como Administrador</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- App Container -->
+    <div id="appContainer" class="app-container" style="display: none;">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-top">
+                <h1>
+                    🚗 Busitrip 
+                    <span>Londrina</span>
+                </h1>
+                <div class="profile-icon" style="width: 45px; height: 45px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; cursor: pointer;" onclick="showScreen('profile')">
+                    👤
+                </div>
+            </div>
+            <div class="location-badge" id="headerLocation">
+                📍 Londrina, PR
+            </div>
+        </header>
+
+        <!-- Conteúdo principal -->
+        <main class="main-content" id="mainContent">
+            <!-- Tela Início -->
+            <div id="homeScreen">
+                <div class="card">
+                    <h3 class="card-title">📍 Buscar Caronas</h3>
+                    
+                    <div class="form-group">
+                        <label>Ponto de saída</label>
+                        <select class="form-control" id="embarqueLocation">
+                            <option value="">Selecione...</option>
+                            <option value="centro">🏢 Centro</option>
+                            <option value="gleba">🌳 Gleba Palhano</option>
+                            <option value="norte">🏘️ Zona Norte</option>
+                            <option value="bandeirantes">🏡 Bandeirantes</option>
+                            <option value="aeroporto">✈️ Jardim Aeroporto</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Destino</label>
+                        <select class="form-control" id="faculdadeDestino">
+                            <option value="">Selecione...</option>
+                            <option value="uel">UEL</option>
+                            <option value="positivo">Universidade Positivo</option>
+                            <option value="unifil">UNIFIL</option>
+                            <option value="unopar">UNOPAR</option>
+                            <option value="puc">PUCPR</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Horário</label>
+                        <input type="time" class="form-control" id="horario" value="07:30">
+                    </div>
+
+                    <button class="btn btn-primary" onclick="buscarCaronas()">Buscar Caronas</button>
+                </div>
+
+                <!-- Resultados da busca -->
+                <div id="resultadoBusca"></div>
+            </div>
+
+            <!-- Tela do Motorista -->
+            <div id="motoristaScreen" style="display: none;">
+                <div class="card">
+                    <h3 class="card-title">🚗 Painel do Motorista</h3>
+                    <p style="color: #64748b; margin-bottom: 20px;">Bem-vindo, <span id="nomeMotorista">Motorista</span>!</p>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+                        <div style="background: #f8fafc; padding: 16px; border-radius: 16px; text-align: center;">
+                            <div style="font-size: 1.8rem; font-weight: bold; color: #2a5298;" id="totalViagensMotorista">47</div>
+                            <div style="color: #64748b; font-size: 0.9rem;">Viagens</div>
+                        </div>
+                        <div style="background: #f8fafc; padding: 16px; border-radius: 16px; text-align: center;">
+                            <div style="font-size: 1.8rem; font-weight: bold; color: #2a5298;" id="avaliacaoMotorista">4.8</div>
+                            <div style="color: #64748b; font-size: 0.9rem;">Avaliação</div>
+                        </div>
+                    </div>
+
+                    <h4 style="margin-bottom: 12px;">📋 Minhas Corridas</h4>
+                    <div id="corridasMotorista"></div>
+
+                    <button class="btn btn-outline" style="margin-top: 16px;" onclick="mostrarModalCadastroCorrida()">
+                        ➕ Cadastrar Nova Corrida
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tela do Administrador -->
+            <div id="adminScreen" style="display: none;">
+                <div class="card">
+                    <h3 class="card-title">⚙️ Painel Administrativo</h3>
+                    <p style="color: #64748b; margin-bottom: 20px;">Bem-vindo, Administrador!</p>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+                        <div style="background: #f8fafc; padding: 16px; border-radius: 16px; text-align: center;">
+                            <div style="font-size: 1.8rem; font-weight: bold; color: #2a5298;" id="totalUsuarios">156</div>
+                            <div style="color: #64748b; font-size: 0.9rem;">Usuários</div>
+                        </div>
+                        <div style="background: #f8fafc; padding: 16px; border-radius: 16px; text-align: center;">
+                            <div style="font-size: 1.8rem; font-weight: bold; color: #2a5298;" id="totalMotoristas">42</div>
+                            <div style="color: #64748b; font-size: 0.9rem;">Motoristas</div>
+                        </div>
+                        <div style="background: #f8fafc; padding: 16px; border-radius: 16px; text-align: center;">
+                            <div style="font-size: 1.8rem; font-weight: bold; color: #2a5298;" id="totalCorridas">89</div>
+                            <div style="color: #64748b; font-size: 0.9rem;">Corridas</div>
+                        </div>
+                        <div style="background: #f8fafc; padding: 16px; border-radius: 16px; text-align: center;">
+                            <div style="font-size: 1.8rem; font-weight: bold; color: #2a5298;" id="totalFaturamento">R$ 1.247</div>
+                            <div style="color: #64748b; font-size: 0.9rem;">Faturamento</div>
+                        </div>
+                    </div>
+
+                    <h4 style="margin-bottom: 12px;">📋 Gerenciar Corridas</h4>
+                    <div id="corridasAdmin"></div>
+                </div>
+            </div>
+
+            <!-- Tela Chat -->
+            <div id="chatScreen" style="display: none;">
+                <div class="card" id="conversasList">
+                    <h3 class="card-title">💬 Conversas</h3>
+                    <div id="listaConversas"></div>
+                </div>
+
+                <div class="card" id="chatAtivo" style="display: none;">
+                    <div class="chat-header" id="chatHeader">
+                        <div class="chat-avatar" style="width: 50px; height: 50px; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem;" id="chatAvatar">👤</div>
+                        <div>
+                            <h3 id="chatNome">Motorista</h3>
+                            <p style="color: #64748b; font-size: 0.9rem;" id="chatStatus">Online</p>
+                        </div>
+                        <button class="btn btn-outline" style="width: auto; margin-left: auto; padding: 8px 16px;" onclick="voltarConversas()">Voltar</button>
+                    </div>
+
+                    <div class="chat-container">
+                        <div class="chat-messages" id="chatMessages">
+                            <!-- Mensagens serão inseridas aqui -->
+                        </div>
+                        <div class="chat-input-container">
+                            <input type="text" class="chat-input" id="chatInput" placeholder="Digite sua mensagem...">
+                            <button class="chat-send-btn" onclick="enviarMensagem()">📤</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tela Perfil -->
+            <div id="profileScreen" style="display: none;">
+                <div class="card">
+                    <h3 class="card-title">👤 Meu Perfil</h3>
+                    
+                    <div class="avatar-container">
+                        <div class="avatar" id="avatarPreview" onclick="document.getElementById('avatarUpload').click()">
+                            👤
+                        </div>
+                        <input type="file" id="avatarUpload" class="avatar-upload" accept="image/*" onchange="previewAvatar(event)">
+                        <h3 id="profileName">João Silva</h3>
+                        <p id="profileEmail" style="color: #64748b;">joao@email.com</p>
+                    </div>
+
+                    <div class="profile-field" onclick="editarCampo('nome')">
+                        <div class="profile-field-icon">👤</div>
+                        <div class="profile-field-content">
+                            <div class="profile-field-label">Nome completo</div>
+                            <div class="profile-field-value" id="fieldNome">João Silva</div>
+                        </div>
+                        <div class="profile-field-edit">✏️</div>
+                    </div>
+
+                    <div class="profile-field" onclick="editarCampo('email')">
+                        <div class="profile-field-icon">📧</div>
+                        <div class="profile-field-content">
+                            <div class="profile-field-label">E-mail</div>
+                            <div class="profile-field-value" id="fieldEmail">joao@email.com</div>
+                        </div>
+                        <div class="profile-field-edit">✏️</div>
+                    </div>
+
+                    <div class="profile-field" onclick="editarCampo('telefone')">
+                        <div class="profile-field-icon">📱</div>
+                        <div class="profile-field-content">
+                            <div class="profile-field-label">Telefone</div>
+                            <div class="profile-field-value" id="fieldTelefone">(43) 99999-9999</div>
+                        </div>
+                        <div class="profile-field-edit">✏️</div>
+                    </div>
+
+                    <div class="profile-field" onclick="editarCampo('curso')">
+                        <div class="profile-field-icon">🎓</div>
+                        <div class="profile-field-content">
+                            <div class="profile-field-label">Curso</div>
+                            <div class="profile-field-value" id="fieldCurso">Ciência da Computação</div>
+                        </div>
+                        <div class="profile-field-edit">✏️</div>
+                    </div>
+
+                    <div class="profile-field" onclick="editarCampo('rgm')">
+                        <div class="profile-field-icon">🆔</div>
+                        <div class="profile-field-content">
+                            <div class="profile-field-label">RGM</div>
+                            <div class="profile-field-value" id="fieldRGM">2024001</div>
+                        </div>
+                        <div class="profile-field-edit">✏️</div>
+                    </div>
+
+                    <button class="btn btn-outline" onclick="salvarPerfil()" style="margin-top: 16px;">
+                        Salvar Alterações
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Navegação inferior -->
+        <nav class="bottom-nav">
+            <div class="nav-item active" onclick="showScreen('home')">
+                <div>🏠</div>
+                <div>Início</div>
+            </div>
+            <div class="nav-item" onclick="showScreen('motorista')">
+                <div>🚗</div>
+                <div>Motorista</div>
+            </div>
+            <div class="nav-item" onclick="showScreen('admin')">
+                <div>⚙️</div>
+                <div>Admin</div>
+            </div>
+            <div class="nav-item" onclick="showScreen('chat')">
+                <div>💬</div>
+                <div>Chat</div>
+            </div>
+        </nav>
+    </div>
+
+    <!-- Modal de Edição -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Editar</h3>
+                <span class="modal-close" onclick="fecharModal()">&times;</span>
+            </div>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" style="display: none;"></div>
+
+    <script>
+        // Dados do usuário logado
+        let usuarioLogado = {
+            nome: "João Silva",
+            email: "joao@email.com",
+            telefone: "(43) 99999-9999",
+            curso: "Ciência da Computação",
+            rgm: "2024001",
+            avatar: null
+        };
+
+        let tipoLogin = "usuario";
+
+        // Motoristas testers gerados artificialmente
+        const motoristasTester = [
+            {
+                id: 1,
+                nome: "Ana Paula Oliveira",
+                tipo: "female",
+                avaliacao: 4.9,
+                foto: "👩",
+                carro: "Toyota Corolla",
+                placa: "ABC1D23",
+                telefone: "(43) 98888-1111",
+                online: true,
+                viagens: 234
+            },
+            {
+                id: 2,
+                nome: "Carlos Eduardo Santos",
+                tipo: "male",
+                avaliacao: 4.8,
+                foto: "👨",
+                carro: "Honda Civic",
+                placa: "XYZ2E45",
+                telefone: "(43) 97777-2222",
+                online: true,
+                viagens: 189
+            },
+            {
+                id: 3,
+                nome: "Mariana Costa Lima",
+                tipo: "female",
+                avaliacao: 5.0,
+                foto: "👩",
+                carro: "Chevrolet Onix",
+                placa: "JKL3F67",
+                telefone: "(43) 96666-3333",
+                online: true,
+                viagens: 312
+            },
+            {
+                id: 4,
+                nome: "Rafael Almeida",
+                tipo: "male",
+                avaliacao: 4.7,
+                foto: "👨",
+                carro: "Volkswagen Gol",
+                placa: "MNO4G89",
+                telefone: "(43) 95555-4444",
+                online: false,
+                viagens: 156
+            },
+            {
+                id: 5,
+                nome: "Juliana Mendes",
+                tipo: "female",
+                avaliacao: 4.9,
+                foto: "👩",
+                carro: "Fiat Argo",
+                placa: "PQR5H01",
+                telefone: "(43) 94444-5555",
+                online: true,
+                viagens: 278
+            },
+            {
+                id: 6,
+                nome: "Fernando Souza",
+                tipo: "male",
+                avaliacao: 4.8,
+                foto: "👨",
+                carro: "Renault Sandero",
+                placa: "STU6I23",
+                telefone: "(43) 93333-6666",
+                online: true,
+                viagens: 201
+            },
+            {
+                id: 7,
+                nome: "Patrícia Ferreira",
+                tipo: "female",
+                avaliacao: 4.9,
+                foto: "👩",
+                carro: "Nissan Kicks",
+                placa: "VWX7J45",
+                telefone: "(43) 92222-7777",
+                online: false,
+                viagens: 167
+            },
+            {
+                id: 8,
+                nome: "Lucas Rodrigues",
+                tipo: "male",
+                avaliacao: 4.6,
+                foto: "👨",
+                carro: "Jeep Renegade",
+                placa: "YZA8K67",
+                telefone: "(43) 91111-8888",
+                online: true,
+                viagens: 145
+            }
+        ];
+
+        // Corridas disponíveis
+        let corridas = [
+            {
+                id: 1,
+                motorista: motoristasTester[0],
+                partida: "centro",
+                destino: "uel",
+                horario: "07:30",
+                preco: 12,
+                vagas: 3,
+                status: "ativa"
+            },
+            {
+                id: 2,
+                motorista: motoristasTester[1],
+                partida: "gleba",
+                destino: "positivo",
+                horario: "08:15",
+                preco: 15,
+                vagas: 2,
+                status: "ativa"
+            },
+            {
+                id: 3,
+                motorista: motoristasTester[2],
+                partida: "norte",
+                destino: "unifil",
+                horario: "09:00",
+                preco: 10,
+                vagas: 4,
+                status: "ativa"
+            },
+            {
+                id: 4,
+                motorista: motoristasTester[3],
+                partida: "bandeirantes",
+                destino: "unopar",
+                horario: "10:30",
+                preco: 14,
+                vagas: 3,
+                status: "ativa"
+            },
+            {
+                id: 5,
+                motorista: motoristasTester[4],
+                partida: "aeroporto",
+                destino: "puc",
+                horario: "11:45",
+                preco: 11,
+                vagas: 2,
+                status: "ativa"
+            },
+            {
+                id: 6,
+                motorista: motoristasTester[5],
+                partida: "centro",
+                destino: "positivo",
+                horario: "13:20",
+                preco: 13,
+                vagas: 4,
+                status: "ativa"
+            },
+            {
+                id: 7,
+                motorista: motoristasTester[6],
+                partida: "gleba",
+                destino: "unifil",
+                horario: "14:30",
+                preco: 12,
+                vagas: 3,
+                status: "ativa"
+            },
+            {
+                id: 8,
+                motorista: motoristasTester[7],
+                partida: "norte",
+                destino: "puc",
+                horario: "16:00",
+                preco: 16,
+                vagas: 3,
+                status: "ativa"
+            }
+        ];
+
+        // Conversas
+        let conversas = [];
+        let mensagens = {};
+        let conversaAtual = null;
+
+        const locations = {
+            'centro': '🏢 Centro',
+            'gleba': '🌳 Gleba Palhano',
+            'norte': '🏘️ Zona Norte',
+            'bandeirantes': '🏡 Bandeirantes',
+            'aeroporto': '✈️ Jardim Aeroporto',
+            'uel': 'UEL',
+            'positivo': 'Positivo',
+            'unifil': 'UNIFIL',
+            'unopar': 'UNOPAR',
+            'puc': 'PUCPR'
+        };
+
+        // Funções de login
+        function showLoginTab(tab) {
+            document.getElementById('loginUsuario').style.display = 'none';
+            document.getElementById('loginMotorista').style.display = 'none';
+            document.getElementById('loginAdmin').style.display = 'none';
+            
+            document.querySelectorAll('.login-tab').forEach(t => {
+                t.style.background = '#e2e8f0';
+                t.style.color = '#1e293b';
+            });
+            
+            if (tab === 'usuario') {
+                document.getElementById('loginUsuario').style.display = 'block';
+                document.querySelector('.login-tab[onclick="showLoginTab(\'usuario\')"]').style.background = '#2a5298';
+                document.querySelector('.login-tab[onclick="showLoginTab(\'usuario\')"]').style.color = 'white';
+            } else if (tab === 'motorista') {
+                document.getElementById('loginMotorista').style.display = 'block';
+                document.querySelector('.login-tab[onclick="showLoginTab(\'motorista\')"]').style.background = '#f472b6';
+                document.querySelector('.login-tab[onclick="showLoginTab(\'motorista\')"]').style.color = 'white';
+            } else {
+                document.getElementById('loginAdmin').style.display = 'block';
+                document.querySelector('.login-tab[onclick="showLoginTab(\'admin\')"]').style.background = '#1e293b';
+                document.querySelector('.login-tab[onclick="showLoginTab(\'admin\')"]').style.color = 'white';
+            }
+        }
+
+        function loginUsuario() {
+            tipoLogin = "usuario";
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('appContainer').style.display = 'flex';
+            showScreen('home');
+            showToast('Bem-vindo ao Busitrip!');
+            carregarConversas();
+        }
+
+        function loginMotorista() {
+            const login = document.getElementById('motoristaLogin').value;
+            const senha = document.getElementById('motoristaSenha').value;
+            
+            if (login === 'motorista1' && senha === 'motorista1') {
+                tipoLogin = "motorista";
+                usuarioLogado.nome = "Motorista Teste";
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('appContainer').style.display = 'flex';
+                showScreen('motorista');
+                carregarCorridasMotorista();
+                showToast('Bem-vindo, Motorista!');
+            } else {
+                showToast('Login ou senha incorretos!');
+            }
+        }
+
+        function loginAdmin() {
+            const login = document.getElementById('adminLogin').value;
+            const senha = document.getElementById('adminSenha').value;
+            
+            if (login === 'busitripadmin' && senha === 'admbus') {
+                tipoLogin = "admin";
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('appContainer').style.display = 'flex';
+                showScreen('admin');
+                carregarCorridasAdmin();
+                showToast('Bem-vindo, Administrador!');
+            } else {
+                showToast('Login ou senha incorretos!');
+            }
+        }
+
+        // Navegação
+        function showScreen(screen) {
+            document.getElementById('homeScreen').style.display = 'none';
+            document.getElementById('motoristaScreen').style.display = 'none';
+            document.getElementById('adminScreen').style.display = 'none';
+            document.getElementById('chatScreen').style.display = 'none';
+            document.getElementById('profileScreen').style.display = 'none';
+            
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            
+            if (screen === 'home') {
+                document.getElementById('homeScreen').style.display = 'block';
+                document.querySelectorAll('.nav-item')[0].classList.add('active');
+            } else if (screen === 'motorista') {
+                document.getElementById('motoristaScreen').style.display = 'block';
+                document.querySelectorAll('.nav-item')[1].classList.add('active');
+            } else if (screen === 'admin') {
+                document.getElementById('adminScreen').style.display = 'block';
+                document.querySelectorAll('.nav-item')[2].classList.add('active');
+            } else if (screen === 'chat') {
+                document.getElementById('chatScreen').style.display = 'block';
+                document.querySelectorAll('.nav-item')[3].classList.add('active');
+                document.getElementById('conversasList').style.display = 'block';
+                document.getElementById('chatAtivo').style.display = 'none';
+                carregarConversas();
+            } else if (screen === 'profile') {
+                document.getElementById('profileScreen').style.display = 'block';
+                carregarPerfil();
+            }
+        }
+
+        // Busca de caronas
+        function buscarCaronas() {
+            const partida = document.getElementById('embarqueLocation').value;
+            const destino = document.getElementById('faculdadeDestino').value;
+            const horario = document.getElementById('horario').value;
+
+            if (!partida || !destino) {
+                showToast('Selecione origem e destino');
+                return;
+            }
+
+            const resultados = corridas.filter(c => 
+                c.partida === partida && c.destino === destino && c.status === 'ativa'
+            );
+
+            const container = document.getElementById('resultadoBusca');
+            
+            if (resultados.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state" style="text-align: center; padding: 40px; background: #f8fafc; border-radius: 24px;">
+                        <div style="font-size: 4rem; margin-bottom: 16px; opacity: 0.5;">🔍</div>
+                        <div style="font-size: 1.2rem; font-weight: 600; margin-bottom: 8px;">Nenhuma carona encontrada</div>
+                        <div style="color: #64748b; margin-bottom: 20px;">
+                            Não há caronas disponíveis de ${locations[partida]} para ${locations[destino]} às ${horario}
+                        </div>
+                        <button class="btn btn-outline" onclick="buscarHorariosAlternativos()">
+                            Ver horários alternativos
+                        </button>
+                    </div>
+                `;
+            } else {
+                let html = '<div class="caronas-container">';
+                resultados.forEach(c => {
+                    html += `
+                        <div class="trip-item" onclick="verDetalhesCorrida(${c.id})">
+                            <div class="trip-avatar ${c.motorista.tipo === 'female' ? 'female' : ''}">
+                                ${c.motorista.foto}
+                            </div>
+                            <div class="trip-info">
+                                <h3>${c.motorista.nome}</h3>
+                                <div class="trip-details">
+                                    <div class="trip-route">
+                                        <span class="location-tag" style="background: #dcfce7; padding: 4px 12px; border-radius: 30px;">${locations[c.partida]}</span>
+                                        → 
+                                        <span class="university-tag" style="background: #eef2ff; padding: 4px 12px; border-radius: 30px;">${locations[c.destino]}</span>
+                                    </div>
+                                    <div class="trip-time">
+                                        <span>⏰ ${c.horario}</span>
+                                        <span>⭐ ${c.motorista.avaliacao}</span>
+                                        <span>🚗 ${c.vagas} vagas</span>
+                                        ${c.motorista.tipo === 'female' ? '<span style="background: #fce7f3; padding: 4px 12px; border-radius: 30px; color: #ec4899;">👩 Só mulheres</span>' : ''}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="trip-price">R$ ${c.preco}</div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                container.innerHTML = html;
+            }
+        }
+
+        function buscarHorariosAlternativos() {
+            showToast('Buscando horários alternativos...');
+        }
+
+        function verDetalhesCorrida(id) {
+            const corrida = corridas.find(c => c.id === id);
+            if (!corrida) return;
+
+            const detalhes = `
+                <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 20px; padding: 20px; margin-bottom: 20px;">
+                    <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+                        <div style="width: 40px; height: 40px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 12px; color: #2a5298;">🚗</div>
+                        <div style="flex: 1;">
+                            <div style="font-size: 0.8rem; color: #64748b;">Motorista</div>
+                            <div style="font-weight: 600; color: #1e293b;">${corrida.motorista.nome} ⭐ ${corrida.motorista.avaliacao}</div>
+                            <div style="font-size: 0.8rem; color: #64748b;">${corrida.motorista.carro} - ${corrida.motorista.placa}</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+                        <div style="width: 40px; height: 40px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 12px; color: #2a5298;">📍</div>
+                        <div style="flex: 1;">
+                            <div style="font-size: 0.8rem; color: #64748b;">Saída</div>
+                            <div style="font-weight: 600; color: #1e293b;">${locations[corrida.partida]}</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+                        <div style="width: 40px; height: 40px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 12px; color: #2a5298;">🏁</div>
+                        <div style="flex: 1;">
+                            <div style="font-size: 0.8rem; color: #64748b;">Destino</div>
+                            <div style="font-weight: 600; color: #1e293b;">${locations[corrida.destino]}</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+                        <div style="width: 40px; height: 40px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 12px; color: #2a5298;">⏰</div>
+                        <div style="flex: 1;">
+                            <div style="font-size: 0.8rem; color: #64748b;">Horário</div>
+                            <div style="font-weight: 600; color: #1e293b;">${corrida.horario}</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; padding: 12px 0;">
+                        <div style="width: 40px; height: 40px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 12px; color: #2a5298;">💰</div>
+                        <div style="flex: 1;">
+                            <div style="font-size: 0.8rem; color: #64748b;">Valor por pessoa</div>
+                            <div style="font-size: 1.2rem; font-weight: bold; color: #2a5298;">R$ ${corrida.preco}</div>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-success" onclick="reservarCorrida(${id})">Reservar e Conversar</button>
+                <button class="btn btn-outline" style="margin-top: 8px;" onclick="fecharModal()">Voltar</button>
+            `;
+
+            mostrarModal('Detalhes da Corrida', detalhes);
+        }
+
+        function reservarCorrida(id) {
+            const corrida = corridas.find(c => c.id === id);
+            if (!corrida) return;
+
+            // Criar conversa
+            const conversaId = `conv_${Date.now()}`;
+            conversas.push({
+                id: conversaId,
+                motorista: corrida.motorista,
+                corrida: corrida,
+                ultimaMensagem: "Olá! Gostaria de reservar a carona",
+                timestamp: new Date().toLocaleTimeString(),
+                naoLidas: 0
+            });
+
+            // Iniciar mensagens
+            mensagens[conversaId] = [
+                {
+                    id: 1,
+                    sender: "sistema",
+                    text: `🔔 Reserva iniciada para ${locations[corrida.partida]} → ${locations[corrida.destino]} às ${corrida.horario}`,
+                    time: new Date().toLocaleTimeString()
+                },
+                {
+                    id: 2,
+                    sender: "motorista",
+                    text: `Olá! Sou ${corrida.motorista.nome}. Tudo bem? Posso te buscar no ponto combinado.`,
+                    time: new Date().toLocaleTimeString()
+                }
+            ];
+
+            fecharModal();
+            showScreen('chat');
+            abrirConversa(conversaId);
+            showToast(`Conversa iniciada com ${corrida.motorista.nome}!`);
+        }
+
         // Funções do Chat
         function carregarConversas() {
             const container = document.getElementById('listaConversas');
@@ -1524,6 +3026,362 @@
                 reader.readAsDataURL(file);
             }
         }
+
+        function editarCampo(campo) {
+            let titulo = '';
+            let valorAtual = '';
+            let tipo = 'text';
+
+            switch(campo) {
+                case 'nome':
+                    titulo = 'Editar Nome';
+                    valorAtual = usuarioLogado.nome;
+                    break;
+                case 'email':
+                    titulo = 'Editar E-mail';
+                    valorAtual = usuarioLogado.email;
+                    tipo = 'email';
+                    break;
+                case 'telefone':
+                    titulo = 'Editar Telefone';
+                    valorAtual = usuarioLogado.telefone;
+                    break;
+                case 'curso':
+                    titulo = 'Editar Curso';
+                    valorAtual = usuarioLogado.curso;
+                    break;
+                case 'rgm':
+                    titulo = 'Editar RGM';
+                    valorAtual = usuarioLogado.rgm;
+                    break;
+            }
+
+            const modalBody = `
+                <div class="form-group">
+                    <label>${titulo}</label>
+                    <input type="${tipo}" class="form-control" id="editCampoValor" value="${valorAtual}">
+                </div>
+                <button class="btn btn-primary" onclick="salvarCampo('${campo}')">Salvar</button>
+            `;
+
+            mostrarModal(titulo, modalBody);
+        }
+
+        function salvarCampo(campo) {
+            const novoValor = document.getElementById('editCampoValor').value;
+            
+            switch(campo) {
+                case 'nome':
+                    usuarioLogado.nome = novoValor;
+                    document.getElementById('profileName').textContent = novoValor;
+                    document.getElementById('fieldNome').textContent = novoValor;
+                    break;
+                case 'email':
+                    usuarioLogado.email = novoValor;
+                    document.getElementById('profileEmail').textContent = novoValor;
+                    document.getElementById('fieldEmail').textContent = novoValor;
+                    break;
+                case 'telefone':
+                    usuarioLogado.telefone = novoValor;
+                    document.getElementById('fieldTelefone').textContent = novoValor;
+                    break;
+                case 'curso':
+                    usuarioLogado.curso = novoValor;
+                    document.getElementById('fieldCurso').textContent = novoValor;
+                    break;
+                case 'rgm':
+                    usuarioLogado.rgm = novoValor;
+                    document.getElementById('fieldRGM').textContent = novoValor;
+                    break;
+            }
+
+            fecharModal();
+            showToast('Perfil atualizado com sucesso!');
+        }
+
+        function salvarPerfil() {
+            showToast('Perfil salvo com sucesso!');
+        }
+
+        // Funções do Motorista
+        function carregarCorridasMotorista() {
+            const container = document.getElementById('corridasMotorista');
+            const corridasMotorista = corridas.filter(c => c.motorista.id === 1); // Motorista logado
+            
+            if (corridasMotorista.length === 0) {
+                container.innerHTML = '<p style="color: #64748b; text-align: center;">Nenhuma corrida cadastrada</p>';
+            } else {
+                let html = '';
+                corridasMotorista.forEach(c => {
+                    html += `
+                        <div class="trip-item">
+                            <div class="trip-info">
+                                <h3>${locations[c.partida]} → ${locations[c.destino]}</h3>
+                                <div class="trip-details">
+                                    <p>⏰ ${c.horario} • R$ ${c.preco} • ${c.vagas} vagas</p>
+                                    <p><span class="badge-green" style="background: #dcfce7; padding: 4px 12px; border-radius: 30px;">Ativa</span></p>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="action-btn edit" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 20px;" onclick="editarCorrida(${c.id})">✏️ Editar</button>
+                                <button class="action-btn delete" style="background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 20px;" onclick="cancelarCorrida(${c.id})">🗑️</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            }
+        }
+
+        // Funções do Admin
+        function carregarCorridasAdmin() {
+            const container = document.getElementById('corridasAdmin');
+            
+            let html = '';
+            corridas.forEach(c => {
+                html += `
+                    <div class="trip-item">
+                        <div class="trip-info">
+                            <h3>${c.motorista.nome}</h3>
+                            <div class="trip-details">
+                                <p>${locations[c.partida]} → ${locations[c.destino]}</p>
+                                <p>⏰ ${c.horario} • R$ ${c.preco}</p>
+                                <p><span class="badge-green" style="background: #dcfce7; padding: 4px 12px; border-radius: 30px;">${c.status}</span></p>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="action-btn edit" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 20px;" onclick="editarCorrida(${c.id})">✏️ Editar</button>
+                            <button class="action-btn delete" style="background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 20px;" onclick="removerCorrida(${c.id})">🗑️</button>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function editarCorrida(id) {
+            const corrida = corridas.find(c => c.id === id);
+            if (!corrida) return;
+
+            const modalBody = `
+                <div class="form-group">
+                    <label>Preço (R$)</label>
+                    <input type="number" class="form-control" id="editPreco" value="${corrida.preco}">
+                </div>
+                <div class="form-group">
+                    <label>Horário</label>
+                    <input type="time" class="form-control" id="editHorario" value="${corrida.horario}">
+                </div>
+                <div class="form-group">
+                    <label>Vagas</label>
+                    <input type="number" class="form-control" id="editVagas" value="${corrida.vagas}">
+                </div>
+                <button class="btn btn-primary" onclick="salvarEdicaoCorrida(${id})">Salvar</button>
+            `;
+
+            mostrarModal('Editar Corrida', modalBody);
+        }
+
+        function salvarEdicaoCorrida(id) {
+            const corrida = corridas.find(c => c.id === id);
+            if (!corrida) return;
+
+            corrida.preco = parseFloat(document.getElementById('editPreco').value);
+            corrida.horario = document.getElementById('editHorario').value;
+            corrida.vagas = parseInt(document.getElementById('editVagas').value);
+
+            fecharModal();
+            carregarCorridasMotorista();
+            carregarCorridasAdmin();
+            showToast('Corrida atualizada com sucesso!');
+        }
+
+        function cancelarCorrida(id) {
+            if (confirm('Deseja realmente cancelar esta corrida?')) {
+                const index = corridas.findIndex(c => c.id === id);
+                if (index !== -1) {
+                    corridas.splice(index, 1);
+                    carregarCorridasMotorista();
+                    showToast('Corrida cancelada!');
+                }
+            }
+        }
+
+        function removerCorrida(id) {
+            if (confirm('Deseja realmente remover esta corrida?')) {
+                const index = corridas.findIndex(c => c.id === id);
+                if (index !== -1) {
+                    corridas.splice(index, 1);
+                    carregarCorridasAdmin();
+                    showToast('Corrida removida!');
+                }
+            }
+        }
+
+        function mostrarModalCadastroCorrida() {
+            const modalBody = `
+                <div class="form-group">
+                    <label>Ponto de saída</label>
+                    <select class="form-control" id="novaPartida">
+                        <option value="centro">Centro</option>
+                        <option value="gleba">Gleba Palhano</option>
+                        <option value="norte">Zona Norte</option>
+                        <option value="bandeirantes">Bandeirantes</option>
+                        <option value="aeroporto">Jardim Aeroporto</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Destino</label>
+                    <select class="form-control" id="novaDestino">
+                        <option value="uel">UEL</option>
+                        <option value="positivo">Positivo</option>
+                        <option value="unifil">UNIFIL</option>
+                        <option value="unopar">UNOPAR</option>
+                        <option value="puc">PUCPR</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Horário</label>
+                    <input type="time" class="form-control" id="novaHorario" value="08:00">
+                </div>
+                <div class="form-group">
+                    <label>Preço (R$)</label>
+                    <input type="number" class="form-control" id="novaPreco" value="15">
+                </div>
+                <div class="form-group">
+                    <label>Vagas</label>
+                    <input type="number" class="form-control" id="novaVagas" value="4">
+                </div>
+                <button class="btn btn-success" onclick="cadastrarNovaCorrida()">Cadastrar</button>
+            `;
+
+            mostrarModal('Nova Corrida', modalBody);
+        }
+
+        function cadastrarNovaCorrida() {
+            const novaCorrida = {
+                id: corridas.length + 1,
+                motorista: motoristasTester[0],
+                partida: document.getElementById('novaPartida').value,
+                destino: document.getElementById('novaDestino').value,
+                horario: document.getElementById('novaHorario').value,
+                preco: parseFloat(document.getElementById('novaPreco').value),
+                vagas: parseInt(document.getElementById('novaVagas').value),
+                status: "ativa"
+            };
+
+            corridas.push(novaCorrida);
+            fecharModal();
+            carregarCorridasMotorista();
+            showToast('Corrida cadastrada com sucesso!');
+        }
+
+        // Funções de download
+        function downloadRelatorio(tipo) {
+            let conteudo = '';
+            let filename = '';
+
+            if (tipo === 'corridas-dia') {
+                const hoje = new Date().toISOString().split('T')[0];
+                const corridasHoje = corridas.filter(c => c.data === hoje || !c.data);
+                
+                conteudo = 'ID,Motorista,Partida,Destino,Horário,Preço,Vagas\n';
+                corridasHoje.forEach(c => {
+                    conteudo += `${c.id},${c.motorista.nome},${locations[c.partida]},${locations[c.destino]},${c.horario},${c.preco},${c.vagas}\n`;
+                });
+                filename = `corridas_dia_${hoje}.csv`;
+            }
+
+            const blob = new Blob([conteudo], { type: 'text/csv' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+            URL.revokeObjectURL(link.href);
+
+            showToast('Relatório baixado!');
+        }
+
+        // Funções auxiliares
+        function mostrarModal(titulo, conteudo) {
+            document.getElementById('modalTitle').textContent = titulo;
+            document.getElementById('modalBody').innerHTML = conteudo;
+            document.getElementById('editModal').classList.add('active');
+        }
+
+        function fecharModal() {
+            document.getElementById('editModal').classList.remove('active');
+        }
+
+        function showToast(mensagem) {
+            const toast = document.getElementById('toast');
+            toast.style.display = 'block';
+            toast.className = 'toast';
+            toast.textContent = mensagem;
+            
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+ 
+        // Funções do Perfil
+        function carregarPerfil() {
+            document.getElementById('profileName').textContent = usuarioLogado.nome;
+            document.getElementById('profileEmail').textContent = usuarioLogado.email;
+            document.getElementById('fieldNome').textContent = usuarioLogado.nome;
+            document.getElementById('fieldEmail').textContent = usuarioLogado.email;
+            document.getElementById('fieldTelefone').textContent = usuarioLogado.telefone;
+            document.getElementById('fieldCurso').textContent = usuarioLogado.curso;
+            document.getElementById('fieldRGM').textContent = usuarioLogado.rgm;
+        }
+
+        function previewAvatar(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('avatarPreview').innerHTML = '';
+                    document.getElementById('avatarPreview').style.backgroundImage = `url(${e.target.result})`;
+                    document.getElementById('avatarPreview').style.backgroundSize = 'cover';
+                    usuarioLogado.avatar = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function avaliarMotorista(nome){
+        const nota = prompt("Avalie o motorista de 1 a 5 ⭐");
+
+        if(nota){
+        showToast("Obrigado pela avaliação!");
+        }
+        }
+        let historico = [];
+
+function adicionarHistorico(corrida){
+    historico.push(corrida);
+    atualizarHistorico();
+}
+
+function atualizarHistorico(){
+    const container = document.getElementById("listaHistorico");
+
+    let html = "";
+
+    historico.forEach(h=>{
+        html += `
+        <div class="trip-item">
+        <div class="trip-info">
+        <h3>${h.motorista.nome}</h3>
+        <p>${locations[h.partida]} → ${locations[h.destino]}</p>
+        <p>${h.horario}</p>
+        </div>
+        </div>
+        `;
+    });
+
+    container.innerHTML = html;
+}
 
         function editarCampo(campo) {
             let titulo = '';
